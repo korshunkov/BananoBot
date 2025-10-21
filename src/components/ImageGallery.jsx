@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import JSZip from 'jszip';
 
 export default function ImageGallery({ results, onRegenerate, onSaveAll, onRetryErrors }) {
   const [selectedImage, setSelectedImage] = useState(null);
@@ -12,14 +13,35 @@ export default function ImageGallery({ results, onRegenerate, onSaveAll, onRetry
     document.body.removeChild(link);
   };
 
-  const saveAllImages = () => {
+  const saveAllImages = async () => {
+    const zip = new JSZip();
+
+    // Добавляем все обработанные изображения в ZIP
     results.forEach((result, index) => {
       if (result.result) {
-        setTimeout(() => {
-          downloadImage(result.result, `processed_${result.originalName || `image_${index}`}`);
-        }, index * 100);
+        // Извлекаем base64 данные из data URL
+        const base64Data = result.result.split(',')[1];
+        const filename = `processed_${result.originalName || `image_${index}.png`}`;
+
+        // Добавляем файл в ZIP
+        zip.file(filename, base64Data, { base64: true });
       }
     });
+
+    // Генерируем ZIP файл
+    const blob = await zip.generateAsync({ type: 'blob' });
+
+    // Создаем ссылку для скачивания
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `processed_images_${Date.now()}.zip`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // Освобождаем память
+    URL.revokeObjectURL(link.href);
+
     if (onSaveAll) onSaveAll();
   };
 

@@ -97,9 +97,9 @@ export default function ImageUploader({ onImagesLoad }) {
             Перетащите изображения сюда
           </p>
           <p className="text-sm text-gray-500 mb-4">или</p>
-          <button className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+          <span className="inline-block px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
             Выбрать файлы
-          </button>
+          </span>
         </label>
       </div>
 
