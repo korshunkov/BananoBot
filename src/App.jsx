@@ -176,6 +176,43 @@ function App() {
     }
   };
 
+  const handleRetryErrors = async () => {
+    if (!apiKey || !prompt) return;
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const failedImages = results.filter(r => r.error);
+
+    if (failedImages.length === 0) return;
+
+    // Устанавливаем статус processing для всех ошибочных изображений
+    setResults(prev => prev.map(r =>
+      r.error ? { ...r, processing: true, error: null } : r
+    ));
+
+    // Обрабатываем все ошибочные изображения последовательно
+    for (const failedResult of failedImages) {
+      const imageToRetry = images.find(img => img.id === failedResult.id);
+
+      if (!imageToRetry) continue;
+
+      try {
+        const processedImage = await processImage(imageToRetry, genAI);
+
+        setResults(prev => prev.map(r =>
+          r.id === failedResult.id
+            ? { ...r, processing: false, result: processedImage }
+            : r
+        ));
+      } catch (error) {
+        setResults(prev => prev.map(r =>
+          r.id === failedResult.id
+            ? { ...r, processing: false, error: error.message }
+            : r
+        ));
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
@@ -210,6 +247,7 @@ function App() {
           <ImageGallery
             results={results}
             onRegenerate={handleRegenerate}
+            onRetryErrors={handleRetryErrors}
           />
         )}
       </div>
