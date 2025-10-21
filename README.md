@@ -49,6 +49,46 @@ npm run build
 npm run preview
 ```
 
+## Деплой онлайн
+
+### Вариант 1: GitHub Pages (рекомендуется)
+
+1. Перейдите в Settings репозитория на GitHub
+2. Выберите Pages в меню слева
+3. В разделе "Source" выберите "GitHub Actions"
+4. Запушьте код в ветку `main` или `master`
+5. GitHub Actions автоматически соберёт и задеплоит приложение
+6. Приложение будет доступно по адресу: `https://<username>.github.io/BananoBot/`
+
+После первого пуша в main/master ветку деплой происходит автоматически!
+
+### Вариант 2: Vercel (один клик)
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/korshunkov/BananoBot)
+
+1. Нажмите кнопку "Deploy" выше
+2. Войдите через GitHub
+3. Vercel автоматически склонирует, соберёт и задеплоит приложение
+4. Получите уникальный URL для вашего приложения
+
+### Вариант 3: Netlify
+
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/korshunkov/BananoBot)
+
+1. Нажмите кнопку "Deploy to netlify"
+2. Войдите через GitHub
+3. Netlify автоматически всё настроит
+
+### Вариант 4: Локальный деплой
+
+```bash
+# Собрать проект
+npm run build
+
+# Папка dist/ содержит готовое приложение
+# Загрузите её на любой хостинг статических сайтов
+```
+
 ## Получение API ключа Google Gemini
 
 1. Перейдите на [Google AI Studio](https://aistudio.google.com/apikey)
