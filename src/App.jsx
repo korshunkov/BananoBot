@@ -30,35 +30,67 @@ function App() {
 
   const processImage = async (image, genAI) => {
     try {
-      // Используем модель gemini-2.5-flash-image для редактирования изображений
-      const model = genAI.getGenerativeModel({
-        model: 'gemini-2.5-flash-image'
-      });
+      console.log('🔄 Начало обработки изображения:', image.name);
 
-      const imagePart = await fileToGenerativePart(image.file);
+      // Пробуем разные варианты моделей
+      const modelNames = [
+        'gemini-2.5-flash-image',
+        'gemini-2.0-flash-exp-image-generation',
+        'imagen-3.0-generate-001'
+      ];
 
-      // Формируем запрос: сначала изображение, потом промпт
-      const result = await model.generateContent([imagePart, { text: prompt }]);
-      const response = await result.response;
+      let lastError = null;
 
-      // Gemini 2.5 Flash Image возвращает изображение
-      // Проверяем, есть ли parts в ответе
-      if (response.candidates && response.candidates[0]?.content?.parts) {
-        const parts = response.candidates[0].content.parts;
+      for (const modelName of modelNames) {
+        try {
+          console.log(`🧪 Попытка с моделью: ${modelName}`);
 
-        // Ищем изображение в ответе
-        for (const part of parts) {
-          if (part.inlineData && part.inlineData.data) {
-            // Возвращаем изображение в формате data URL
-            return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+          const model = genAI.getGenerativeModel({
+            model: modelName
+          });
+
+          const imagePart = await fileToGenerativePart(image.file);
+
+          // Формируем более конкретный промпт для редактирования
+          const editPrompt = `Transform this image: ${prompt}. Keep the main composition but apply the requested style/changes.`;
+
+          console.log('📤 Отправка запроса с промптом:', editPrompt);
+
+          // Формируем запрос: сначала изображение, потом промпт
+          const result = await model.generateContent([imagePart, { text: editPrompt }]);
+          const response = await result.response;
+
+          console.log('📦 Ответ от API (модель ' + modelName + '):', response);
+
+          // Проверяем разные форматы ответа
+          if (response.candidates && response.candidates[0]?.content?.parts) {
+            const parts = response.candidates[0].content.parts;
+            console.log('📝 Части ответа:', parts);
+
+            // Ищем изображение в ответе
+            for (const part of parts) {
+              if (part.inlineData && part.inlineData.data) {
+                console.log('✅ Изображение найдено! mimeType:', part.inlineData.mimeType);
+                return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+              }
+            }
           }
+
+          console.warn(`⚠️ Модель ${modelName} не вернула изображение, пробуем следующую...`);
+
+        } catch (modelError) {
+          console.error(`❌ Ошибка с моделью ${modelName}:`, modelError.message);
+          lastError = modelError;
+          continue;
         }
       }
 
-      throw new Error('Модель не вернула изображение. Проверьте промпт.');
+      // Если ни одна модель не сработала
+      console.error('❌ Все модели не смогли обработать изображение');
+      throw new Error('Не удалось обработать изображение ни одной моделью. Проверьте консоль браузера (F12) для деталей. Последняя ошибка: ' + (lastError?.message || 'нет данных'));
 
     } catch (error) {
-      console.error('Ошибка при обработке:', error);
+      console.error('❌ Критическая ошибка при обработке:', error);
       throw new Error(error.message || 'Ошибка обработки изображения');
     }
   };
