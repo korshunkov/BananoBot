@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - master
+      - claude/google-nanobanano-image-tool-011CULCaAxWF92Lzs45Tp9pm
   workflow_dispatch:
 
 permissions:
