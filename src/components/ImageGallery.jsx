@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export default function ImageGallery({ results, onRegenerate, onSaveAll }) {
+export default function ImageGallery({ results, onRegenerate, onSaveAll, onRetryErrors }) {
   const [selectedImage, setSelectedImage] = useState(null);
 
   const downloadImage = (imageUrl, filename) => {
@@ -109,14 +109,24 @@ export default function ImageGallery({ results, onRegenerate, onSaveAll }) {
             Завершено: {completedResults.length} | В процессе: {processingResults.length} | Ошибки: {failedResults.length}
           </p>
         </div>
-        {completedResults.length > 0 && (
-          <button
-            onClick={saveAllImages}
-            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium"
-          >
-            Сохранить все ({completedResults.length})
-          </button>
-        )}
+        <div className="flex gap-3">
+          {failedResults.length > 0 && (
+            <button
+              onClick={onRetryErrors}
+              className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition font-medium"
+            >
+              Перегенерировать ошибки ({failedResults.length})
+            </button>
+          )}
+          {completedResults.length > 0 && (
+            <button
+              onClick={saveAllImages}
+              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium"
+            >
+              Сохранить все ({completedResults.length})
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
