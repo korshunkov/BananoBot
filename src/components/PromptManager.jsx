@@ -1,13 +1,19 @@
 import { useState, useEffect } from 'react';
 
-export default function PromptManager({ onPromptSelect }) {
+export default function PromptManager({ onPromptSelect, mode = 'visual' }) {
   const [prompts, setPrompts] = useState([]);
   const [newPrompt, setNewPrompt] = useState('');
   const [selectedPrompt, setSelectedPrompt] = useState('');
   const [showInput, setShowInput] = useState(false);
 
+  const storageKey = `gemini_prompts_${mode}`;
+  const title = mode === 'visual' ? 'Промпты для обработки изображений' : 'Промпты для генерации описаний';
+  const placeholder = mode === 'visual'
+    ? 'Введите промпт для обработки изображений (например: make it more colorful, add sunglasses, etc.)'
+    : 'Введите промпт для генерации описаний (например: Создай продающее описание товара на изображении)';
+
   useEffect(() => {
-    const saved = localStorage.getItem('gemini_prompts');
+    const saved = localStorage.getItem(storageKey);
     if (saved) {
       const savedPrompts = JSON.parse(saved);
       setPrompts(savedPrompts);
@@ -15,14 +21,19 @@ export default function PromptManager({ onPromptSelect }) {
         setSelectedPrompt(savedPrompts[0]);
         onPromptSelect(savedPrompts[0]);
       }
+    } else {
+      // Сбрасываем состояние при смене режима
+      setPrompts([]);
+      setSelectedPrompt('');
+      onPromptSelect('');
     }
-  }, []);
+  }, [mode]);
 
   const addPrompt = () => {
     if (newPrompt.trim() && !prompts.includes(newPrompt.trim())) {
       const updatedPrompts = [...prompts, newPrompt.trim()];
       setPrompts(updatedPrompts);
-      localStorage.setItem('gemini_prompts', JSON.stringify(updatedPrompts));
+      localStorage.setItem(storageKey, JSON.stringify(updatedPrompts));
       setSelectedPrompt(newPrompt.trim());
       onPromptSelect(newPrompt.trim());
       setNewPrompt('');
@@ -38,7 +49,7 @@ export default function PromptManager({ onPromptSelect }) {
   const deletePrompt = (promptToDelete) => {
     const updatedPrompts = prompts.filter(p => p !== promptToDelete);
     setPrompts(updatedPrompts);
-    localStorage.setItem('gemini_prompts', JSON.stringify(updatedPrompts));
+    localStorage.setItem(storageKey, JSON.stringify(updatedPrompts));
     if (selectedPrompt === promptToDelete && updatedPrompts.length > 0) {
       setSelectedPrompt(updatedPrompts[0]);
       onPromptSelect(updatedPrompts[0]);
@@ -50,7 +61,7 @@ export default function PromptManager({ onPromptSelect }) {
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-      <h2 className="text-2xl font-bold mb-4 text-gray-800">Промпты для обработки</h2>
+      <h2 className="text-2xl font-bold mb-4 text-gray-800">{title}</h2>
 
       {prompts.length > 0 && (
         <div className="mb-4">
@@ -89,7 +100,7 @@ export default function PromptManager({ onPromptSelect }) {
           <textarea
             value={newPrompt}
             onChange={(e) => setNewPrompt(e.target.value)}
-            placeholder="Введите промпт для обработки изображений (например: make it more colorful, add sunglasses, etc.)"
+            placeholder={placeholder}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             rows="3"
           />
