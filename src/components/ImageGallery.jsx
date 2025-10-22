@@ -122,10 +122,6 @@ export default function ImageGallery({ results, onRegenerate, onSaveAll, onRetry
   const processingResults = results.filter(r => r.processing);
   const failedResults = results.filter(r => r.error);
 
-  console.log('ImageGallery results:', results);
-  console.log('Failed results:', failedResults);
-  console.log('onRetryErrors prop:', onRetryErrors);
-
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="flex justify-between items-center mb-4">
