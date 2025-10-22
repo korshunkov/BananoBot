@@ -4,6 +4,8 @@ import APIKeyManager from './components/APIKeyManager';
 import PromptManager from './components/PromptManager';
 import ImageUploader from './components/ImageUploader';
 import ImageGallery from './components/ImageGallery';
+import TabSwitcher from './components/TabSwitcher';
+import ResultsTable from './components/ResultsTable';
 
 function App() {
   const [apiKey, setApiKey] = useState('');
@@ -11,6 +13,7 @@ function App() {
   const [images, setImages] = useState([]);
   const [results, setResults] = useState([]);
   const [processing, setProcessing] = useState(false);
+  const [activeTab, setActiveTab] = useState('visual');
 
   const fileToGenerativePart = async (file) => {
     return new Promise((resolve) => {
@@ -28,6 +31,7 @@ function App() {
     });
   };
 
+  // Обработка изображений для Визуал-Бустера
   const processImage = async (image, genAI) => {
     try {
       console.log('🔄 Начало обработки изображения:', image.name);
@@ -87,6 +91,52 @@ function App() {
     }
   };
 
+  // Генерация описаний для Генератора описаний
+  const processDescription = async (image, genAI) => {
+    try {
+      console.log('🔄 Начало генерации описания:', image.name);
+
+      const modelName = 'models/gemini-flash-latest';
+      console.log(`🧪 Использование модели: ${modelName}`);
+
+      const model = genAI.getGenerativeModel({
+        model: modelName
+      });
+
+      const imagePart = await fileToGenerativePart(image.file);
+
+      console.log('📤 Отправка запроса с промптом:', prompt);
+
+      // Формируем запрос: изображение + промпт для описания
+      const result = await model.generateContent([imagePart, { text: prompt }]);
+      const response = await result.response;
+
+      console.log('📦 Ответ от API:', response);
+
+      const text = response.text();
+
+      if (!text) {
+        throw new Error('Модель не вернула текст');
+      }
+
+      console.log('✅ Описание получено:', text.substring(0, 100) + '...');
+      return text;
+
+    } catch (error) {
+      console.error('❌ Ошибка при генерации описания:', error);
+
+      if (error.message && error.message.includes('429')) {
+        throw new Error('Превышена квота API. Подождите немного и попробуйте снова.');
+      }
+
+      if (error.message && error.message.includes('quota')) {
+        throw new Error('Превышена квота API. Подождите немного и попробуйте снова.');
+      }
+
+      throw new Error(error.message || 'Ошибка генерации описания');
+    }
+  };
+
   const handleProcess = async () => {
     if (!apiKey) {
       alert('Выберите API ключ');
@@ -105,32 +155,63 @@ function App() {
     const genAI = new GoogleGenerativeAI(apiKey);
 
     // Инициализируем результаты
-    const initialResults = images.map(img => ({
-      id: img.id,
-      original: img.preview,
-      originalName: img.name,
-      processing: true,
-      result: null,
-      error: null,
-    }));
-    setResults(initialResults);
+    if (activeTab === 'visual') {
+      const initialResults = images.map(img => ({
+        id: img.id,
+        original: img.preview,
+        originalName: img.name,
+        processing: true,
+        result: null,
+        error: null,
+      }));
+      setResults(initialResults);
 
-    // Обрабатываем изображения последовательно
-    for (let i = 0; i < images.length; i++) {
-      try {
-        const processedImage = await processImage(images[i], genAI);
+      // Обрабатываем изображения последовательно
+      for (let i = 0; i < images.length; i++) {
+        try {
+          const processedImage = await processImage(images[i], genAI);
 
-        setResults(prev => prev.map(r =>
-          r.id === images[i].id
-            ? { ...r, processing: false, result: processedImage }
-            : r
-        ));
-      } catch (error) {
-        setResults(prev => prev.map(r =>
-          r.id === images[i].id
-            ? { ...r, processing: false, error: error.message }
-            : r
-        ));
+          setResults(prev => prev.map(r =>
+            r.id === images[i].id
+              ? { ...r, processing: false, result: processedImage }
+              : r
+          ));
+        } catch (error) {
+          setResults(prev => prev.map(r =>
+            r.id === images[i].id
+              ? { ...r, processing: false, error: error.message }
+              : r
+          ));
+        }
+      }
+    } else {
+      // Режим генерации описаний
+      const initialResults = images.map(img => ({
+        id: img.id,
+        originalName: img.name,
+        processing: true,
+        description: null,
+        error: null,
+      }));
+      setResults(initialResults);
+
+      // Генерируем описания последовательно
+      for (let i = 0; i < images.length; i++) {
+        try {
+          const description = await processDescription(images[i], genAI);
+
+          setResults(prev => prev.map(r =>
+            r.id === images[i].id
+              ? { ...r, processing: false, description }
+              : r
+          ));
+        } catch (error) {
+          setResults(prev => prev.map(r =>
+            r.id === images[i].id
+              ? { ...r, processing: false, error: error.message }
+              : r
+          ));
+        }
       }
     }
 
@@ -152,13 +233,23 @@ function App() {
     ));
 
     try {
-      const processedImage = await processImage(imageToRegenerate, genAI);
+      if (activeTab === 'visual') {
+        const processedImage = await processImage(imageToRegenerate, genAI);
 
-      setResults(prev => prev.map(r =>
-        r.id === imageId
-          ? { ...r, processing: false, result: processedImage }
-          : r
-      ));
+        setResults(prev => prev.map(r =>
+          r.id === imageId
+            ? { ...r, processing: false, result: processedImage }
+            : r
+        ));
+      } else {
+        const description = await processDescription(imageToRegenerate, genAI);
+
+        setResults(prev => prev.map(r =>
+          r.id === imageId
+            ? { ...r, processing: false, description }
+            : r
+        ));
+      }
     } catch (error) {
       setResults(prev => prev.map(r =>
         r.id === imageId
@@ -188,13 +279,23 @@ function App() {
       if (!imageToRetry) continue;
 
       try {
-        const processedImage = await processImage(imageToRetry, genAI);
+        if (activeTab === 'visual') {
+          const processedImage = await processImage(imageToRetry, genAI);
 
-        setResults(prev => prev.map(r =>
-          r.id === failedResult.id
-            ? { ...r, processing: false, result: processedImage }
-            : r
-        ));
+          setResults(prev => prev.map(r =>
+            r.id === failedResult.id
+              ? { ...r, processing: false, result: processedImage }
+              : r
+          ));
+        } else {
+          const description = await processDescription(imageToRetry, genAI);
+
+          setResults(prev => prev.map(r =>
+            r.id === failedResult.id
+              ? { ...r, processing: false, description }
+              : r
+          ));
+        }
       } catch (error) {
         setResults(prev => prev.map(r =>
           r.id === failedResult.id
@@ -205,16 +306,27 @@ function App() {
     }
   };
 
+  const handleTabChange = (newTab) => {
+    setActiveTab(newTab);
+    setResults([]); // Очищаем результаты при смене вкладки
+    setPrompt(''); // Сбрасываем промпт
+  };
+
   return (
     <div className="min-h-screen p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-4xl md:text-5xl font-bold text-white text-center mb-8 drop-shadow-lg">
+        <h1 className="text-4xl md:text-5xl font-bold text-white text-center mb-3 drop-shadow-lg">
           ДжусиЦех
         </h1>
+        <p className="text-xl text-white text-center mb-8 drop-shadow-md">
+          Контент-завод по производству идеальных карточек товаров
+        </p>
+
+        <TabSwitcher activeTab={activeTab} onTabChange={handleTabChange} />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           <APIKeyManager onKeySelect={setApiKey} />
-          <PromptManager onPromptSelect={setPrompt} />
+          <PromptManager onPromptSelect={setPrompt} mode={activeTab} />
         </div>
 
         <ImageUploader onImagesLoad={setImages} />
@@ -236,11 +348,19 @@ function App() {
         )}
 
         {results.length > 0 && (
-          <ImageGallery
-            results={results}
-            onRegenerate={handleRegenerate}
-            onRetryErrors={handleRetryErrors}
-          />
+          activeTab === 'visual' ? (
+            <ImageGallery
+              results={results}
+              onRegenerate={handleRegenerate}
+              onRetryErrors={handleRetryErrors}
+            />
+          ) : (
+            <ResultsTable
+              results={results}
+              onRegenerate={handleRegenerate}
+              onRetryErrors={handleRetryErrors}
+            />
+          )
         )}
 
         <footer className="mt-8 text-center">
