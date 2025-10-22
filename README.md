@@ -1,4 +1,4 @@
-# Nano Banano Image Tool
+# ДжусиЦех
 
 Веб-приложение для редактирования изображений с помощью Google Gemini 2.5 Flash Image API (Nano Banana).
 
