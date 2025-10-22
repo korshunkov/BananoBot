@@ -32,65 +32,57 @@ function App() {
     try {
       console.log('🔄 Начало обработки изображения:', image.name);
 
-      // Пробуем разные варианты моделей
-      const modelNames = [
-        'gemini-2.5-flash-image',
-        'gemini-2.0-flash-exp-image-generation',
-        'imagen-3.0-generate-001'
-      ];
+      const modelName = 'gemini-2.5-flash-image';
+      console.log(`🧪 Использование модели: ${modelName}`);
 
-      let lastError = null;
+      const model = genAI.getGenerativeModel({
+        model: modelName
+      });
 
-      for (const modelName of modelNames) {
-        try {
-          console.log(`🧪 Попытка с моделью: ${modelName}`);
+      const imagePart = await fileToGenerativePart(image.file);
 
-          const model = genAI.getGenerativeModel({
-            model: modelName
-          });
+      // Формируем более конкретный промпт для редактирования
+      const editPrompt = `Transform this image: ${prompt}. Keep the main composition but apply the requested style/changes.`;
 
-          const imagePart = await fileToGenerativePart(image.file);
+      console.log('📤 Отправка запроса с промптом:', editPrompt);
 
-          // Формируем более конкретный промпт для редактирования
-          const editPrompt = `Transform this image: ${prompt}. Keep the main composition but apply the requested style/changes.`;
+      // Формируем запрос: сначала изображение, потом промпт
+      const result = await model.generateContent([imagePart, { text: editPrompt }]);
+      const response = await result.response;
 
-          console.log('📤 Отправка запроса с промптом:', editPrompt);
+      console.log('📦 Ответ от API:', response);
 
-          // Формируем запрос: сначала изображение, потом промпт
-          const result = await model.generateContent([imagePart, { text: editPrompt }]);
-          const response = await result.response;
+      // Проверяем разные форматы ответа
+      if (response.candidates && response.candidates[0]?.content?.parts) {
+        const parts = response.candidates[0].content.parts;
+        console.log('📝 Части ответа:', parts);
 
-          console.log('📦 Ответ от API (модель ' + modelName + '):', response);
-
-          // Проверяем разные форматы ответа
-          if (response.candidates && response.candidates[0]?.content?.parts) {
-            const parts = response.candidates[0].content.parts;
-            console.log('📝 Части ответа:', parts);
-
-            // Ищем изображение в ответе
-            for (const part of parts) {
-              if (part.inlineData && part.inlineData.data) {
-                console.log('✅ Изображение найдено! mimeType:', part.inlineData.mimeType);
-                return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-              }
-            }
+        // Ищем изображение в ответе
+        for (const part of parts) {
+          if (part.inlineData && part.inlineData.data) {
+            console.log('✅ Изображение найдено! mimeType:', part.inlineData.mimeType);
+            return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
           }
-
-          console.warn(`⚠️ Модель ${modelName} не вернула изображение, пробуем следующую...`);
-
-        } catch (modelError) {
-          console.error(`❌ Ошибка с моделью ${modelName}:`, modelError.message);
-          lastError = modelError;
-          continue;
         }
       }
 
-      // Если ни одна модель не сработала
-      console.error('❌ Все модели не смогли обработать изображение');
-      throw new Error('Не удалось обработать изображение ни одной моделью. Проверьте консоль браузера (F12) для деталей. Последняя ошибка: ' + (lastError?.message || 'нет данных'));
+      // Если изображение не найдено
+      console.error('❌ Модель не вернула изображение');
+      throw new Error('Модель не вернула изображение. Проверьте промпт.');
 
     } catch (error) {
-      console.error('❌ Критическая ошибка при обработке:', error);
+      console.error('❌ Ошибка при обработке:', error);
+
+      // Проверяем, если это ошибка квоты
+      if (error.message && error.message.includes('429')) {
+        throw new Error('Превышена квота API. Подождите немного и попробуйте снова.');
+      }
+
+      // Проверяем, если это ошибка квоты (альтернативный формат)
+      if (error.message && error.message.includes('quota')) {
+        throw new Error('Превышена квота API. Подождите немного и попробуйте снова.');
+      }
+
       throw new Error(error.message || 'Ошибка обработки изображения');
     }
   };
