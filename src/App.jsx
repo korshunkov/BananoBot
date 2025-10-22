@@ -209,7 +209,7 @@ function App() {
     <div className="min-h-screen p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-4xl md:text-5xl font-bold text-white text-center mb-8 drop-shadow-lg">
-          Nano Banano Image Tool
+          ДжусиЦех
         </h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
@@ -242,6 +242,17 @@ function App() {
             onRetryErrors={handleRetryErrors}
           />
         )}
+
+        <footer className="mt-8 text-center">
+          <a
+            href="https://t.me/korshunkov"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-white hover:text-gray-300 transition-colors text-sm font-medium"
+          >
+            KORSHUNKOV
+          </a>
+        </footer>
       </div>
     </div>
   );
